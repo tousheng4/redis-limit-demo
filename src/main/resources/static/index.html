@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接口限流测试</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zcool+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            font-family: 'Zcool KuaiLe', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #ff6b6b;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #ffd93d;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .tips {
+            background: #fff9e6;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: left;
+            border-left: 5px solid #ffd93d;
+        }
+
+        .tips-title {
+            color: #e6a23c;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .tips-text {
+            color: #666;
+            font-size: 1em;
+            line-height: 1.8;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 18px 30px;
+            font-size: 1.4em;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Zcool KuaiLe', cursive;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-test1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-test2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-normal {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn small {
+            display: block;
+            font-size: 0.7em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .count-display {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 15px;
+            font-size: 1.1em;
+            color: #0066cc;
+        }
+
+        .emoji {
+            font-size: 1.3em;
+        }
+
+        .mascot {
+            font-size: 4.5em;
+            margin-bottom: 15px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .footer {
+            margin-top: 25px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        /* 弹窗样式 */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .popup-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .popup {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            animation: popIn 0.4s;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .popup-icon {
+            font-size: 5em;
+            margin-bottom: 15px;
+        }
+
+        .popup-title {
+            font-size: 1.8em;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+
+        .popup-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .popup-btn {
+            padding: 15px 40px;
+            font-size: 1.3em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: 'Zcool KuaiLe', cursive;
+            transition: all 0.3s;
+        }
+
+        .popup-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 成功弹窗 */
+        .popup-overlay.success .popup-icon {
+            animation: successPop 0.5s;
+        }
+
+        @keyframes successPop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* 失败弹窗 */
+        .popup-overlay.error .popup {
+            border: 4px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="mascot" id="mascot">🚀</div>
+        <h1>接口限流测试</h1>
+        <p class="subtitle">快来戳戳看，会不会触发限流？👇</p>
+
+        <div class="tips">
+            <div class="tips-title">📖 使用说明</div>
+            <div class="tips-text">
+                • <strong>接口1</strong>：每分钟只能访问 <strong>10次</strong><br>
+                • <strong>接口2</strong>：每分钟只能访问 <strong>5次</strong><br>
+                • 超过限制会返回 <strong>429 错误</strong>哦~<br>
+                • 限流规则：同一IP + 同一接口 = 独立计数
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-test1" onclick="testApi('/test1')">
+                <span class="emoji">🎯</span> 测试接口1
+                <small>每分钟限制 10 次</small>
+            </button>
+            <button class="btn btn-test2" onclick="testApi('/test2')">
+                <span class="emoji">🎨</span> 测试接口2
+                <small>每分钟限制 5 次</small>
+            </button>
+            <button class="btn btn-normal" onclick="testApi('/normal')">
+                <span class="emoji">🌈</span> 普通接口
+                <small>不限制次数哦</small>
+            </button>
+        </div>
+
+        <div class="count-display" id="countDisplay">
+            <span class="emoji">📊</span> 当前页面请求次数: <span id="requestCount">0</span> 次
+        </div>
+
+        <div class="footer">
+            💡 提示：60秒后计数会自动清零重新开始
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup">
+            <div class="popup-icon" id="popupIcon">🎉</div>
+            <div class="popup-title" id="popupTitle">成功啦！</div>
+            <div class="popup-text" id="popupText">太棒了！继续加油~</div>
+            <button class="popup-btn" onclick="closePopup()">知道啦 👌</button>
+        </div>
+    </div>
+
+    <script>
+        let requestCount = 0;
+
+        async function testApi(url) {
+            const mascot = document.getElementById('mascot');
+            const countSpan = document.getElementById('requestCount');
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                requestCount++;
+                countSpan.textContent = requestCount;
+
+                if (response.status === 200) {
+                    // 成功
+                    showPopup('🎉', '成功啦！', data.msg || '接口调用成功！太棒了~ 🚀', 'success');
+                    mascot.textContent = '😊';
+                } else if (response.status === 429) {
+                    // 限流
+                    showPopup('🚫', '哎呀，被限流啦！', '你点击太快啦~<br>请等 <strong>60秒</strong> 后再试吧 😢', 'error');
+                    mascot.textContent = '😢';
+                }
+            } catch (error) {
+                showPopup('💥', '网络出错啦！', '请检查网络连接~', 'error');
+                mascot.textContent = '😱';
+            }
+        }
+
+        function showPopup(icon, title, text, type) {
+            const overlay = document.getElementById('popupOverlay');
+            const popupIcon = document.getElementById('popupIcon');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupText = document.getElementById('popupText');
+
+            popupIcon.textContent = icon;
+            popupTitle.textContent = title;
+            popupText.innerHTML = text;
+
+            overlay.className = 'popup-overlay ' + type + ' show';
+        }
+
+        function closePopup() {
+            const overlay = document.getElementById('popupOverlay');
+            overlay.classList.remove('show');
+        }
+
+        // 点击遮罩关闭弹窗
+        document.getElementById('popupOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePopup();
+            }
+        });
+    </script>
+</body>
+</html>
